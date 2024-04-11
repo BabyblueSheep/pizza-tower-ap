@@ -1,0 +1,7 @@
+# -----------
+#  SKINS
+# -----------
+dresser_ap_bluetitle = "Archipelago Blue"
+dresser_ap_blue = "Rep your favourite rando"
+dresser_ap_colortitle = "Archipelago Multicolor"
+dresser_ap_color = "Rep your favourite rando"
