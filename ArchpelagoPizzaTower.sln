@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArchipelagoPizzaTower.Patch
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArchipelagoPizzaTower.Patcher.Console", "ArchipelagoPizzaTower.Patcher.Console\ArchipelagoPizzaTower.Patcher.Console.csproj", "{D0DB4DF7-0F12-4AE2-B6C2-8CE61405B3F3}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UndertaleModTool", "UndertaleModTool", "{A1A52FF6-B983-4820-8BEC-CB74E6B88D66}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UndertaleModLib", "UndertaleModTool\UndertaleModLib\UndertaleModLib.csproj", "{D260BA2D-D708-4D44-B04E-1550C9E0719D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,11 +25,18 @@ Global
 		{D0DB4DF7-0F12-4AE2-B6C2-8CE61405B3F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D0DB4DF7-0F12-4AE2-B6C2-8CE61405B3F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D0DB4DF7-0F12-4AE2-B6C2-8CE61405B3F3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D260BA2D-D708-4D44-B04E-1550C9E0719D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D260BA2D-D708-4D44-B04E-1550C9E0719D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D260BA2D-D708-4D44-B04E-1550C9E0719D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D260BA2D-D708-4D44-B04E-1550C9E0719D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4FA92477-04B4-4838-8478-0697C143185C}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D260BA2D-D708-4D44-B04E-1550C9E0719D} = {A1A52FF6-B983-4820-8BEC-CB74E6B88D66}
 	EndGlobalSection
 EndGlobal
