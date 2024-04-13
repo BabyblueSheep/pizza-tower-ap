@@ -1,7 +1,17 @@
 # -----------
+# ARCHIPELAGO
+# -----------
+
+# -----------
 #  SKINS
 # -----------
 dresser_ap_bluetitle = "Archipelago Blue"
 dresser_ap_blue = "Rep your favourite rando"
 dresser_ap_colortitle = "Archipelago Multicolor"
 dresser_ap_color = "Rep your favourite rando"
+# -----------
+#  MAIN MENU
+# -----------
+menu_archipelago = "ARCHIPELAGO"
+menu_apmenutip = "[u][d] Move in menu; ENTER Start input"
+menu_apport = "Port: %"

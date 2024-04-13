@@ -57,7 +57,45 @@ namespace ArchpelagoPizzaTower.Patcher.Library
             if (Data is null)
                 throw new ArgumentNullException("Mod data is not loaded");
             string dataPath = folderpath + @"\data.win";
-            
+
+            void AddScript(string scriptName, string codeName, string code)
+            {
+                Data.Scripts.Add(new UndertaleScript { Name = Data.Strings.MakeString(scriptName), Code = AddCode(codeName, code) });
+            }
+            UndertaleCode AddCode(string codeName, string code)
+            {
+                UndertaleCode codeObject = new UndertaleCode();
+                codeObject.Name = Data.Strings.MakeString(codeName);
+                codeObject.ReplaceGML(code, Data);
+                Data.Code.Add(codeObject);
+                return codeObject;
+            }
+
+            UndertaleGameObject AddObject(string name)
+            {
+                UndertaleGameObject gameObject = new()
+                {
+                    Name = Data.Strings.MakeString(name),
+                };
+                Data.GameObjects.Add(gameObject);
+                return gameObject;
+            }
+            void AddEvent(UndertaleGameObject gameObject, int eventType, uint eventSubType, string codeName, string code)
+            {
+                UndertaleCode script = AddCode(codeName, code);
+                UndertalePointerList<UndertaleGameObject.Event> events = gameObject.Events[eventType];
+                UndertaleGameObject.EventAction gameEventAction = new()
+                {
+                    CodeId = script
+                };
+                UndertaleGameObject.Event gameEvent = new()
+                {
+                    EventSubtype = eventSubType
+                };
+                gameEvent.Actions.Add(gameEventAction);
+                events.Add(gameEvent);
+            }
+
             #region Import all custom sprites
             Dictionary<string, int> nameToPageItemDict = new();
             const int pageDimension = 1024;
@@ -135,8 +173,10 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                 sprite.Textures.Add(texture);
                 Data.Sprites.Add(sprite);
             }
-            #endregion
+
             MessageHandler($"Sprites imported");
+            #endregion
+
             #region Add custom skins
             ReplaceTexture("spr_peppalette", "spr_peppalette_0");
             ReplaceTexture("spr_ratmountpalette", "spr_ratmountpalette_0");
@@ -152,8 +192,152 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                 array_push(player_palettes[0], [""ap_color"", 1, 12, asset_get_index(""spr_appattern1"")])
                 array_push(player_palettes[1], [""ap_color"", 1, 12, asset_get_index(""spr_appattern1"")])
             ", Data);
-            #endregion
+
             MessageHandler($"Custom skins added");
+            #endregion
+
+            #region Custom input typing
+            UndertaleGameObject customInput = AddObject("obj_custominput");
+
+            AddEvent(customInput, 0, 0, "gml_Object_obj_custominput_Create_0", @"
+                text = """"
+                allow_typing = false
+                enabled_keys = ""ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 123456790""
+                blinking = true
+                blink_speed = 15
+                alarm[0] = blink_speed
+            ");
+            AddEvent(customInput, 2, 0, "gml_Object_obj_custominput_Alarm_0", @"
+                blinking = !blinking
+                alarm[0] = blink_speed
+            ");
+            AddEvent(customInput, 9, 1, "gml_Object_obj_custominput_KeyPress_1", @"
+                if (!allow_typing)
+                    exit
+                if (string_count(chr(keyboard_key), enabled_keys)) and (string_length(chr(keyboard_key)) == 1)
+                {
+                    text += keyboard_lastchar
+                }
+
+                fmod_event_one_shot(""event:/sfx/ui/select"");
+            ");
+
+            #endregion
+
+            #region Main menu addition
+            Data.Code.ByName("gml_Object_obj_mainmenu_Create_0").AppendGML(@"
+                connectselect = 0
+                is_typing = false
+                apport = "" ""
+                text_input = instance_create(0, 0, obj_custominput)
+
+                did_tip = false
+            ", Data);
+
+
+            Data.Code.ByName("gml_Object_obj_mainmenu_Step_0").AppendGML(@"
+                if (state == 0 << 0)
+                {
+                    if (keyboard_check_pressed(vk_f1))
+                    {
+                        state = 1812 << 0
+				        switch currentselect
+				        {
+					        case 0:
+						        sprite_index = spr_titlepep_left;
+						        break;
+					        case 1:
+						        sprite_index = spr_titlepep_middle;
+						        break;
+					        case 2:
+						        sprite_index = spr_titlepep_right;
+						        break;
+                        }
+                    }
+                }
+                else if (state == 1812 << 0)
+                {
+                    if (!did_tip)
+                    {
+                        with (create_transformation_tip(lang_get_value(""menu_apmenutip"")))
+                        {
+                            alarm[1] = 200;
+                        }
+                        did_tip = true;
+                    }
+                    if (is_typing)
+                    {
+                        switch(connectselect)
+                        {
+                            case 1:
+                                
+                                break
+                        }
+                    }
+                    else
+                    {
+                        connectselect += key_down2 - key_up2
+                        connectselect = clamp(connectselect, 0, 5)
+                    
+                        if keyboard_check_pressed(vk_enter)
+                        {
+                            switch(connectselect)
+                            {
+                                text_input = """"
+                                case 1:
+                                    is_typing = true
+                                    text_input.allow_typing = true
+                                    break
+                                case 5:
+                                    state = 0 << 0
+                                    break
+                            }
+                        }
+                    }
+                }
+            ", Data);
+
+            AddTexture("spr_connectap", 104, 66, "spr_connectap_0");
+            Data.Code.ByName("gml_Object_obj_mainmenu_Draw_0").AppendGML(@"
+                draw_set_alpha(extrauialpha)
+                lang_draw_sprite(asset_get_index(""spr_connectap""), 0, 400, 5)
+                scr_draw_text_arr(440, 40, scr_compile_icon_text(""[y]""), c_white, extrauialpha)
+                draw_set_alpha(1)
+            ", Data);
+
+            Data.Code.ByName("gml_Object_obj_mainmenu_Draw_64").AppendGML(@"
+                
+                if (state == 1812 << 0)
+                {
+                    draw_set_alpha(0.5)
+                    draw_rectangle_color(0, 0, room_width, room_height, c_black, c_black, c_black, c_black, 0)
+                    draw_set_alpha(1)
+                    draw_set_font(lang_get_font(""bigfont""))
+                    draw_set_halign(fa_center)
+                    draw_set_valign(fa_middle)
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) - 150, lang_get_value(""menu_archipelago""), c_white, c_white, c_white, c_white, 1)
+
+                    c0 = (connectselect == 0) ? c_white : c_gray;
+                    c1 = (connectselect == 1) ? c_white : c_gray;
+                    c2 = (connectselect == 2) ? c_white : c_gray;
+                    c3 = (connectselect == 3) ? c_white : c_gray;
+                    c4 = (connectselect == 4) ? c_white : c_gray;
+                    c5 = (connectselect == 5) ? c_white : c_gray;
+
+                    draw_set_font(lang_get_font(""creditsfont""))
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 30,lang_get_value(""menu_archipelago""), c0, c0, c0, c0, 1)
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 0, embed_value_string(lang_get_value(""menu_apport""), [text_input.text]), c1, c1, c1, c1, 1)
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 60, lang_get_value(""menu_archipelago""), c2, c2, c2, c2, 1)
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 90, lang_get_value(""menu_archipelago""), c3, c3, c3, c3, 1)
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 120, lang_get_value(""menu_archipelago""), c4, c4, c4, c4, 1)
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 150, lang_get_value(""menu_archipelago""), c5, c5, c5, c5, 1)
+                }
+                draw_set_font(lang_get_font(""creditsfont""));
+                
+            ", Data);
+
+            MessageHandler($"Added new submenu to main menu");
+            #endregion
 
             using (FileStream fs = new FileInfo(dataPath).OpenWrite())
             {
