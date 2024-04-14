@@ -1,3 +1,9 @@
 [submodule "UndertaleModTool"]
 	path = UndertaleModTool
 	url = https://github.com/UnderminersTeam/UndertaleModTool.git
+[submodule "ArchipelagoPizzaTower.GameMakerExtension/subprojects/wswrap"]
+	path = ArchipelagoPizzaTower.GameMakerExtension/subprojects/wswrap
+	url = https://github.com/black-sliver/wswrap.git
+[submodule "ArchipelagoPizzaTower.GameMakerExtension/subprojects/apclientpp"]
+	path = ArchipelagoPizzaTower.GameMakerExtension/subprojects/apclientpp
+	url = https://github.com/black-sliver/apclientpp.git
