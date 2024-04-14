@@ -198,28 +198,49 @@ namespace ArchpelagoPizzaTower.Patcher.Library
 
             #region Custom input typing
             UndertaleGameObject customInput = AddObject("obj_custominput");
-
             AddEvent(customInput, 0, 0, "gml_Object_obj_custominput_Create_0", @"
-                text = """"
-                allow_typing = false
-                enabled_keys = ""ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 123456790""
+                enabled_chars = @""ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 1234567890""
                 blinking = true
                 blink_speed = 15
                 alarm[0] = blink_speed
+                text = """"
+                keyboard_string = """"
             ");
             AddEvent(customInput, 2, 0, "gml_Object_obj_custominput_Alarm_0", @"
                 blinking = !blinking
                 alarm[0] = blink_speed
             ");
             AddEvent(customInput, 9, 1, "gml_Object_obj_custominput_KeyPress_1", @"
-                if (!allow_typing)
-                    exit
-                if (string_count(chr(keyboard_key), enabled_keys)) and (string_length(chr(keyboard_key)) == 1)
+                blinking = true
+                blink_speed = 15
+
+                if keyboard_check(vk_control)
                 {
-                    text += keyboard_lastchar
+                    if (keyboard_check(ord(""V"")))
+                        text += clipboard_get_text();
+                }
+                else
+                {
+                    if keyboard_check(vk_backspace)
+                    {
+                        text = string_copy(text, 1, string_length(text) - 1);
+                    }
+                    else
+                    {
+                        text += keyboard_string
+                    }
                 }
 
-                fmod_event_one_shot(""event:/sfx/ui/select"");
+                for (var i = 1; i < string_length(text); i++)
+                {
+                    var letter = string_char_at(text, i)
+                    if string_pos(letter, enabled_chars) == 0
+                    {
+                        text = string_replace_all(text, letter, """");
+                    }
+                }
+                text = string_copy(text, 1, 64);
+                keyboard_string = """"
             ");
 
             #endregion
@@ -228,7 +249,10 @@ namespace ArchpelagoPizzaTower.Patcher.Library
             Data.Code.ByName("gml_Object_obj_mainmenu_Create_0").AppendGML(@"
                 connectselect = 0
                 is_typing = false
-                apport = "" ""
+                ap_ip = """"
+                ap_port = """"
+                ap_name = """"
+                ap_password = """"
                 text_input = instance_create(0, 0, obj_custominput)
 
                 did_tip = false
@@ -240,18 +264,19 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                 {
                     if (keyboard_check_pressed(vk_f1))
                     {
+                        connectselect = 0
                         state = 1812 << 0
 				        switch currentselect
 				        {
 					        case 0:
-						        sprite_index = spr_titlepep_left;
-						        break;
+						        sprite_index = spr_titlepep_left
+						        break
 					        case 1:
-						        sprite_index = spr_titlepep_middle;
-						        break;
+						        sprite_index = spr_titlepep_middle
+						        break
 					        case 2:
-						        sprite_index = spr_titlepep_right;
-						        break;
+						        sprite_index = spr_titlepep_right
+						        break
                         }
                     }
                 }
@@ -261,17 +286,32 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                     {
                         with (create_transformation_tip(lang_get_value(""menu_apmenutip"")))
                         {
-                            alarm[1] = 200;
+                            alarm[1] = 330;
                         }
                         did_tip = true;
                     }
+
                     if (is_typing)
                     {
                         switch(connectselect)
                         {
-                            case 1:
-                                
+                            case 0:
+                                ap_ip = text_input.text
                                 break
+                            case 1:
+                                ap_port = text_input.text
+                                break
+                            case 2:
+                                ap_name = text_input.text
+                                break
+                            case 3:
+                                ap_password = text_input.text
+                                break
+                        }
+                        
+                        if (keyboard_check_pressed(vk_enter))
+                        {
+                            is_typing = false
                         }
                     }
                     else
@@ -281,12 +321,24 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                     
                         if keyboard_check_pressed(vk_enter)
                         {
+                            keyboard_string = """"
                             switch(connectselect)
                             {
-                                text_input = """"
+                                case 0:
+                                    is_typing = true
+                                    text_input.text = ap_ip
+                                    break
                                 case 1:
                                     is_typing = true
-                                    text_input.allow_typing = true
+                                    text_input.text  = ap_port
+                                    break
+                                case 2:
+                                    is_typing = true
+                                    text_input.text  = ap_name
+                                    break
+                                case 3:
+                                    is_typing = true
+                                    text_input.text  = ap_password
                                     break
                                 case 5:
                                     state = 0 << 0
@@ -325,12 +377,12 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                     c5 = (connectselect == 5) ? c_white : c_gray;
 
                     draw_set_font(lang_get_font(""creditsfont""))
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 30,lang_get_value(""menu_archipelago""), c0, c0, c0, c0, 1)
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 0, embed_value_string(lang_get_value(""menu_apport""), [text_input.text]), c1, c1, c1, c1, 1)
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 60, lang_get_value(""menu_archipelago""), c2, c2, c2, c2, 1)
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 90, lang_get_value(""menu_archipelago""), c3, c3, c3, c3, 1)
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 120, lang_get_value(""menu_archipelago""), c4, c4, c4, c4, 1)
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 150, lang_get_value(""menu_archipelago""), c5, c5, c5, c5, 1)
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 0,embed_value_string(lang_get_value(""menu_apip""), [ap_ip]), c0, c0, c0, c0, 1)
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 30, embed_value_string(lang_get_value(""menu_apport""), [ap_port]), c1, c1, c1, c1, 1)
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 60, embed_value_string(lang_get_value(""menu_apname""), [ap_name]), c2, c2, c2, c2, 1)
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 90, embed_value_string(lang_get_value(""menu_appass""), [ap_password]), c3, c3, c3, c3, 1)
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 120, lang_get_value(""menu_apconnect""), c4, c4, c4, c4, 1)
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 150, lang_get_value(""menu_apleave""), c5, c5, c5, c5, 1)
                 }
                 draw_set_font(lang_get_font(""creditsfont""));
                 
