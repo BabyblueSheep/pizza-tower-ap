@@ -196,6 +196,10 @@ namespace ArchpelagoPizzaTower.Patcher.Library
             MessageHandler($"Custom skins added");
             #endregion
 
+            #region Impelement Archipelago .dll
+            UndertaleExtension apExtension = new();
+            #endregion
+
             #region Custom input typing
             UndertaleGameObject customInput = AddObject("obj_custominput");
             AddEvent(customInput, 0, 0, "gml_Object_obj_custominput_Create_0", @"

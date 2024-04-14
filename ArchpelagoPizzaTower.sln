@@ -3,13 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34701.34
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArchipelagoPizzaTower.Patcher.Library", "ArchipelagoPizzaTower.Patcher.Library\ArchipelagoPizzaTower.Patcher.Library.csproj", "{640DB96E-DF67-44CC-AB45-5B3660610BB7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ArchipelagoPizzaTower.Patcher.Library", "ArchipelagoPizzaTower.Patcher.Library\ArchipelagoPizzaTower.Patcher.Library.csproj", "{640DB96E-DF67-44CC-AB45-5B3660610BB7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArchipelagoPizzaTower.Patcher.Console", "ArchipelagoPizzaTower.Patcher.Console\ArchipelagoPizzaTower.Patcher.Console.csproj", "{D0DB4DF7-0F12-4AE2-B6C2-8CE61405B3F3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ArchipelagoPizzaTower.Patcher.Console", "ArchipelagoPizzaTower.Patcher.Console\ArchipelagoPizzaTower.Patcher.Console.csproj", "{D0DB4DF7-0F12-4AE2-B6C2-8CE61405B3F3}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ArchipelagoPizzaTower.GameMakerExtension", "ArchipelagoPizzaTower.GameMakerExtension\ArchipelagoPizzaTower.GameMakerExtension.vcxproj", "{7326EF20-1EDD-4F3E-B8BE-6A018EAD4AD6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UndertaleModTool", "UndertaleModTool", "{A1A52FF6-B983-4820-8BEC-CB74E6B88D66}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UndertaleModLib", "UndertaleModTool\UndertaleModLib\UndertaleModLib.csproj", "{D260BA2D-D708-4D44-B04E-1550C9E0719D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UndertaleModLib", "UndertaleModTool\UndertaleModLib\UndertaleModLib.csproj", "{D260BA2D-D708-4D44-B04E-1550C9E0719D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,6 +27,10 @@ Global
 		{D0DB4DF7-0F12-4AE2-B6C2-8CE61405B3F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D0DB4DF7-0F12-4AE2-B6C2-8CE61405B3F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D0DB4DF7-0F12-4AE2-B6C2-8CE61405B3F3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7326EF20-1EDD-4F3E-B8BE-6A018EAD4AD6}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{7326EF20-1EDD-4F3E-B8BE-6A018EAD4AD6}.Debug|Any CPU.Build.0 = Debug|x64
+		{7326EF20-1EDD-4F3E-B8BE-6A018EAD4AD6}.Release|Any CPU.ActiveCfg = Release|x64
+		{7326EF20-1EDD-4F3E-B8BE-6A018EAD4AD6}.Release|Any CPU.Build.0 = Release|x64
 		{D260BA2D-D708-4D44-B04E-1550C9E0719D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D260BA2D-D708-4D44-B04E-1550C9E0719D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D260BA2D-D708-4D44-B04E-1550C9E0719D}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -33,10 +39,10 @@ Global
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {4FA92477-04B4-4838-8478-0697C143185C}
-	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{D260BA2D-D708-4D44-B04E-1550C9E0719D} = {A1A52FF6-B983-4820-8BEC-CB74E6B88D66}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4FA92477-04B4-4838-8478-0697C143185C}
 	EndGlobalSection
 EndGlobal
