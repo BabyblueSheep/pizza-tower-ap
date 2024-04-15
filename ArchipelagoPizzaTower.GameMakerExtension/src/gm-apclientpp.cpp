@@ -4,3 +4,8 @@
 
 #include <apclient.hpp>
 #include <nlohmann/json.hpp>
+
+const char* test()
+{
+	return "t";
+}

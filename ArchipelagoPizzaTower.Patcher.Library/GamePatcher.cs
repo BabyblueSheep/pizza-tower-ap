@@ -197,13 +197,44 @@ namespace ArchpelagoPizzaTower.Patcher.Library
             #endregion
 
             #region Impelement Archipelago .dll
-            UndertaleExtension apExtension = new();
+            const int FunctionID = 1022;
+
+            UndertaleExtension apExtension = new()
+            {
+                Name = Data.Strings.MakeString("ArchipelagoPizzaTower.GameMakerExtension"),
+                ClassName = Data.Strings.MakeString(""),
+                Version = Data.Strings.MakeString("1.0.0"),
+                FolderName = Data.Strings.MakeString("")
+            };
+            Data.Extensions.Add(apExtension);
+
+            UndertaleExtensionFile extensionFile = new()
+            {
+                Kind = UndertaleExtensionKind.Dll,
+                Filename = Data.Strings.MakeString("ArchipelagoPizzaTower.GameMakerExtension_x64.dll"),
+                InitScript = Data.Strings.MakeString(""),
+                CleanupScript = Data.Strings.MakeString("")
+            };
+            apExtension.Files.Add(extensionFile);
+
+            UndertaleExtensionFunction testFunction = new()
+            {
+                Name = Data.Strings.MakeString("test"),
+                ExtName = Data.Strings.MakeString("test"),
+                Kind = 11,
+                ID = FunctionID,
+                RetType = UndertaleExtensionVarType.String
+            };
+            extensionFile.Functions.Add(testFunction);
+            File.Copy(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/Assets/ArchipelagoPizzaTower.GameMakerExtension.dll", folderpath + @"\ArchipelagoPizzaTower.GameMakerExtension_x64.dll");
+
+            MessageHandler($"Added Archipelago extension");
             #endregion
 
             #region Custom input typing
             UndertaleGameObject customInput = AddObject("obj_custominput");
             AddEvent(customInput, 0, 0, "gml_Object_obj_custominput_Create_0", @"
-                enabled_chars = @""ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 1234567890""
+                enabled_chars = @""ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.:!0123456789?'\ÁÉÍÓÚáéíóú_-[]▼()&#风雨廊桥전태양*яиБжидГзв¡¿Ññ"" + ""\""""
                 blinking = true
                 blink_speed = 15
                 alarm[0] = blink_speed
@@ -247,13 +278,14 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                 keyboard_string = """"
             ");
 
+            MessageHandler($"Added custom input object");
             #endregion
 
             #region Main menu addition
             Data.Code.ByName("gml_Object_obj_mainmenu_Create_0").AppendGML(@"
                 connectselect = 0
                 is_typing = false
-                ap_ip = """"
+                ap_ip = test()
                 ap_port = """"
                 ap_name = """"
                 ap_password = """"
