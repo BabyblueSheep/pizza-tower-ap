@@ -51,7 +51,7 @@ namespace ArchpelagoPizzaTower.Patcher.Library
             MessageHandler($"All done!");
         }
 
-        // https://github.com/randovania/YAMS/tree/main
+        // https://github.com/randovania/YAMS/blob/main/YAMS-LIB/Program.cs
         public static void PatchGame(string folderpath)
         {
             if (Data is null)
@@ -80,10 +80,10 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                 Data.GameObjects.Add(gameObject);
                 return gameObject;
             }
-            void AddEvent(UndertaleGameObject gameObject, int eventType, uint eventSubType, string codeName, string code)
+            void AddEvent(UndertaleGameObject gameObject, EventType eventType, uint eventSubType, string codeName, string code)
             {
                 UndertaleCode script = AddCode(codeName, code);
-                UndertalePointerList<UndertaleGameObject.Event> events = gameObject.Events[eventType];
+                UndertalePointerList<UndertaleGameObject.Event> events = gameObject.Events[(int)eventType];
                 UndertaleGameObject.EventAction gameEventAction = new()
                 {
                     CodeId = script
@@ -197,7 +197,6 @@ namespace ArchpelagoPizzaTower.Patcher.Library
             #endregion
 
             #region Impelement Archipelago .dll
-            const int FunctionID = 1022;
 
             UndertaleExtension apExtension = new()
             {
@@ -217,35 +216,77 @@ namespace ArchpelagoPizzaTower.Patcher.Library
             };
             apExtension.Files.Add(extensionFile);
 
-            UndertaleExtensionFunction testFunction = new()
+            void AddFunction(string name, UndertaleExtensionVarType returnType, params UndertaleExtensionVarType[] argumentTypes)
             {
-                Name = Data.Strings.MakeString("test"),
-                ExtName = Data.Strings.MakeString("test"),
-                Kind = 11,
-                ID = FunctionID,
-                RetType = UndertaleExtensionVarType.String
-            };
-            extensionFile.Functions.Add(testFunction);
+                UndertaleSimpleList<UndertaleExtensionFunctionArg> arguments = new();
+                foreach (UndertaleExtensionVarType arg in argumentTypes)
+                {
+                    arguments.Add(new() { Type = arg });
+                }
+                UndertaleExtensionFunction function = new()
+                {
+                    Name = Data.Strings.MakeString(name),
+                    ExtName = Data.Strings.MakeString(name),
+                    Kind = 11,
+                    ID = Data.ExtensionFindLastId(),
+                    RetType = returnType,
+                    Arguments = arguments
+                };
+                extensionFile.Functions.Add(function);
+            }
+
+            AddFunction("ap_connect", UndertaleExtensionVarType.Double, UndertaleExtensionVarType.String);
+            AddFunction("ap_connect_slot", UndertaleExtensionVarType.Double, UndertaleExtensionVarType.String, UndertaleExtensionVarType.String, UndertaleExtensionVarType.Double);
+            AddFunction("ap_poll", UndertaleExtensionVarType.Double);
+            AddFunction("ap_get_state", UndertaleExtensionVarType.Double);
+            AddFunction("ap_wants_deathlink", UndertaleExtensionVarType.Double);
+
             File.Copy(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/Assets/ArchipelagoPizzaTower.GameMakerExtension.dll", folderpath + @"\ArchipelagoPizzaTower.GameMakerExtension_x64.dll");
 
             MessageHandler($"Added Archipelago extension");
+
+            UndertaleGameObject apObject = AddObject("obj_archipelago");
+            AddEvent(apObject, EventType.Create, 0, "gml_Object_obj_archipelago_Create_0", @"
+                persistent = true 
+
+                ip_address = """"
+                ip_port = """"
+                name = """"
+                password = """"
+
+                sent_info = false
+            ");
+            AddEvent(apObject, EventType.Alarm, 0, "gml_Object_obj_archipelago_Alarm_0", @"
+                ap_connect(ip_address + "":"" + ip_port)
+            ");
+
+            AddEvent(apObject, EventType.Step, (int)EventSubtypeStep.Step, "gml_Object_obj_archipelago_Step_0", @"
+                ap_poll()
+                if (ap_get_state() == 3 and !sent_info)
+                {
+                    ap_connect_slot(name, password, ap_wants_deathlink())
+                    fmod_event_one_shot(""event:/sfx/ui/lightswitch"");
+                    sent_info = true
+                }
+            ");
+
             #endregion
 
             #region Custom input typing
             UndertaleGameObject customInput = AddObject("obj_custominput");
-            AddEvent(customInput, 0, 0, "gml_Object_obj_custominput_Create_0", @"
-                enabled_chars = @""ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.:!0123456789?'\ÁÉÍÓÚáéíóú_-[]▼()&#风雨廊桥전태양*яиБжидГзв¡¿Ññ"" + ""\""""
+            AddEvent(customInput, EventType.Create, 0, "gml_Object_obj_custominput_Create_0", @"
+                enabled_chars = @""ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.:!0123456789?'\ÁÉÍÓÚáéíóú_-[]▼()&#风雨廊桥전태양*яиБжидГзв¡¿Ññ "" + ""\""""
                 blinking = true
                 blink_speed = 15
                 alarm[0] = blink_speed
                 text = """"
                 keyboard_string = """"
             ");
-            AddEvent(customInput, 2, 0, "gml_Object_obj_custominput_Alarm_0", @"
+            AddEvent(customInput, EventType.Alarm, 0, "gml_Object_obj_custominput_Alarm_0", @"
                 blinking = !blinking
                 alarm[0] = blink_speed
             ");
-            AddEvent(customInput, 9, 1, "gml_Object_obj_custominput_KeyPress_1", @"
+            AddEvent(customInput, EventType.KeyPress, (int)EventSubtypeKey.vk_anykey, "gml_Object_obj_custominput_KeyPress_1", @"
                 blinking = true
                 blink_speed = 15
 
@@ -285,7 +326,7 @@ namespace ArchpelagoPizzaTower.Patcher.Library
             Data.Code.ByName("gml_Object_obj_mainmenu_Create_0").AppendGML(@"
                 connectselect = 0
                 is_typing = false
-                ap_ip = test()
+                ap_ip = """"
                 ap_port = """"
                 ap_name = """"
                 ap_password = """"
@@ -355,7 +396,7 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                         connectselect += key_down2 - key_up2
                         connectselect = clamp(connectselect, 0, 5)
                     
-                        if keyboard_check_pressed(vk_enter)
+                        if keyboard_check_pressed(vk_enter) or key_jump
                         {
                             keyboard_string = """"
                             switch(connectselect)
@@ -376,12 +417,23 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                                     is_typing = true
                                     text_input.text  = ap_password
                                     break
+                                case 4:
+                                    ap_connect(ap_ip + "":"" + ap_port)
+                                    var archipelago = instance_create(0, 0, obj_archipelago)
+                                    archipelago.name = ap_name
+                                    archipelago.password = ap_password
+                                    state = 1912 << 0
+                                    break
                                 case 5:
                                     state = 0 << 0
                                     break
                             }
                         }
                     }
+                }
+                else if (state == 1912 << 0)
+                {
+                    
                 }
             ", Data);
 
@@ -419,8 +471,19 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                     tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 90, embed_value_string(lang_get_value(""menu_appass""), [ap_password]), c3, c3, c3, c3, 1)
                     tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 120, lang_get_value(""menu_apconnect""), c4, c4, c4, c4, 1)
                     tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 150, lang_get_value(""menu_apleave""), c5, c5, c5, c5, 1)
+                    draw_set_font(lang_get_font(""bigfont""))
                 }
-                draw_set_font(lang_get_font(""creditsfont""));
+                else if (state == 1912 << 0)
+                {
+                    draw_set_alpha(0.7)
+                    draw_rectangle_color(0, 0, room_width, room_height, c_black, c_black, c_black, c_black, 0)
+                    draw_set_alpha(1)
+                    draw_set_font(lang_get_font(""bigfont""))
+                    draw_set_halign(fa_center)
+                    draw_set_valign(fa_middle)
+
+                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2), ap_get_state(), c_white, c_white, c_white, c_white, 1)
+                }
                 
             ", Data);
 

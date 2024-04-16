@@ -74,16 +74,23 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;ARCHIPELAGOPIZZATOWERGAMEMAKEREXTENSION_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;ARCHIPELAGOPIZZATOWERGAMEMAKEREXTENSION_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);ASIO_STANDALONE;DASIO_STANDALONE;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)subprojects\openssl\include;$(ProjectDir)subprojects\websocketpp;$(ProjectDir)subprojects\wswrap\include;$(ProjectDir)subprojects\valijson\include;$(ProjectDir)subprojects\json\include;$(ProjectDir)subprojects\asio\include;$(ProjectDir)subprojects\apclientpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus /w34996 /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
+      <AdditionalLibraryDirectories>C:\Windows\System32;$(ProjectDir)subprojects\openssl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libcrypto_static.lib;libssl_static.lib;crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(TargetPath) "$(SolutionDir)ArchipelagoPizzaTower.Patcher.Library\Assets\$(TargetFileName)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -91,10 +98,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;ARCHIPELAGOPIZZATOWERGAMEMAKEREXTENSION_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;ARCHIPELAGOPIZZATOWERGAMEMAKEREXTENSION_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);ASIO_STANDALONE;DASIO_STANDALONE;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)subprojects\openssl\include;$(ProjectDir)subprojects\websocketpp;$(ProjectDir)subprojects\wswrap\include;$(ProjectDir)subprojects\valijson\include;$(ProjectDir)subprojects\json\include;$(ProjectDir)subprojects\asio\include;$(ProjectDir)subprojects\apclientpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus /w34996 /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -102,25 +111,30 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
+      <AdditionalLibraryDirectories>C:\Windows\System32;$(ProjectDir)subprojects\openssl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libcrypto_static.lib;libssl_static.lib;crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(TargetPath) "$(SolutionDir)ArchipelagoPizzaTower.Patcher.Library\Assets\$(TargetFileName)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;ARCHIPELAGOPIZZATOWERGAMEMAKEREXTENSION_EXPORTS;_WINDOWS;_USRDLL;ASIO_STANDALONE;DASIO_STANDALONE;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;ARCHIPELAGOPIZZATOWERGAMEMAKEREXTENSION_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);ASIO_STANDALONE;DASIO_STANDALONE;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Program Files\OpenSSL-Win64\include;$(ProjectDir)subprojects\websocketpp;$(ProjectDir)subprojects\wswrap\include;$(ProjectDir)subprojects\valijson\include;$(ProjectDir)subprojects\json\include;$(ProjectDir)subprojects\asio\include;$(ProjectDir)subprojects\apclientpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/Zc:__cplusplus /w34996 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)subprojects\openssl\include;$(ProjectDir)subprojects\websocketpp;$(ProjectDir)subprojects\wswrap\include;$(ProjectDir)subprojects\valijson\include;$(ProjectDir)subprojects\json\include;$(ProjectDir)subprojects\asio\include;$(ProjectDir)subprojects\apclientpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus /w34996 /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>C:\Program Files\OpenSSL-Win64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libcrypto.lib;libssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Windows\System32;$(ProjectDir)subprojects\openssl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libcrypto_static.lib;libssl_static.lib;crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy $(TargetPath) "$(SolutionDir)ArchipelagoPizzaTower.Patcher.Library\Assets\$(TargetFileName)"</Command>
@@ -132,10 +146,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;ARCHIPELAGOPIZZATOWERGAMEMAKEREXTENSION_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;ARCHIPELAGOPIZZATOWERGAMEMAKEREXTENSION_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);ASIO_STANDALONE;DASIO_STANDALONE;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir)subprojects\openssl\include;$(ProjectDir)subprojects\websocketpp;$(ProjectDir)subprojects\wswrap\include;$(ProjectDir)subprojects\valijson\include;$(ProjectDir)subprojects\json\include;$(ProjectDir)subprojects\asio\include;$(ProjectDir)subprojects\apclientpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus /w34996 /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -143,13 +159,23 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
+      <AdditionalLibraryDirectories>C:\Windows\System32;$(ProjectDir)subprojects\openssl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libcrypto_static.lib;libssl_static.lib;crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(TargetPath) "$(SolutionDir)ArchipelagoPizzaTower.Patcher.Library\Assets\$(TargetFileName)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\gm-apclientpp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\gm-apclientpp.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cacert.pem">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

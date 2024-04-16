@@ -4,7 +4,7 @@ An implementation of the [Archipelago randomiser](https://github.com/Archipelago
 # Compilation
 When cloning, use `git clone --recurse-submodules` or `git submodule update --init` to also copy all submodules. Use `dotnet build ArchipelagoPizzaTower.Patcher.Console` to build the app as normal.
 
-Note that, for now, you need to either have an OpenSSL installation in `C:\Program Files\OpenSSL-Win64` or change the installation yourself in `Configuration Properties > Linker > General > Additional Library Directories`. I don't know if you can freely distribute OpenSSL, sorry.
+Note that you may need to change linker settings for `crypt32` to work properly. I'm unsure if it's allowed to freely distribute it. Same goes for the OpenSSL certificate, but you can [get one here](https://curl.se/docs/caextract.html).
 
 # License
 All code is licensed under the GNU General Public License version 3. See the `LICENSE.txt` file for full details.
