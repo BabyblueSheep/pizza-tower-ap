@@ -11,7 +11,7 @@ using static ArchipelagoPizzaTower.Patcher.Commands.PatchCommand;
 
 namespace ArchipelagoPizzaTower.Patcher.Commands
 {
-    [Description("Patches Pizza Tower to have base randomizer functionality, without online support.")]
+    [Description("Patches Pizza Tower to have base randomizer functionality.")]
     public sealed class PatchCommand : Command<PatchSettings>
     {
         public sealed class PatchSettings : CommandSettings
@@ -19,6 +19,11 @@ namespace ArchipelagoPizzaTower.Patcher.Commands
             [CommandArgument(0, "[FOLDERPATH]")]
             [Description("The location path of the Pizza Tower folder.")]
             public string FolderPath { get; set; }
+
+            [CommandOption("-s|--exclude-skins|--no-skins")]
+            [DefaultValue(true)]
+            [Description("Whether custom skins shouldn't be added or not. Use if you're planning on using other skin mods.")]
+            public bool ExcludeSkins { get; set; }
         }
 
         public override int Execute(CommandContext context, PatchSettings settings)
@@ -28,7 +33,7 @@ namespace ArchipelagoPizzaTower.Patcher.Commands
                 try
                 {
                     GamePatcher.MessageHandler = AnsiConsole.WriteLine;
-                    GamePatcher.Patch(Path.GetDirectoryName(settings.FolderPath));
+                    GamePatcher.Patch(Path.GetDirectoryName(settings.FolderPath), settings.ExcludeSkins);
                 }
                 catch (Exception ex)
                 {

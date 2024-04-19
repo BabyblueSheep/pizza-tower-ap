@@ -5,6 +5,7 @@
 
 
 exterR ap_connect(const char* uri);
+exterR ap_disconnect();
 exterR ap_connect_slot(const char* name, const char* password, double deathlink);
 exterR ap_poll();
 exterR ap_get_state();

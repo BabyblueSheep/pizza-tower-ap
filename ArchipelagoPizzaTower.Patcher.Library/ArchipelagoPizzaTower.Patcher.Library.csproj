@@ -15,6 +15,18 @@
   <ItemGroup>
     <None Remove="Assets\Textures\spr_appattern1_0.png" />
     <None Remove="Assets\Textures\spr_connectap_0.png" />
+    <None Remove="Assets\Textures\spr_creditsfont_cursor_0.png" />
+    <None Remove="Assets\Textures\spr_menu_archipelago_0.png" />
+    <None Remove="Assets\Textures\spr_menu_archipelago_1.png" />
+    <None Remove="Assets\Textures\spr_menu_archipelago_2.png" />
+    <None Remove="Assets\Textures\spr_menu_connecting_0.png" />
+    <None Remove="Assets\Textures\spr_menu_connecting_1.png" />
+    <None Remove="Assets\Textures\spr_menu_connecting_2.png" />
+    <None Remove="Assets\Textures\spr_menu_connecting_3.png" />
+    <None Remove="Assets\Textures\spr_menu_connecting_4.png" />
+    <None Remove="Assets\Textures\spr_menu_connecting_5.png" />
+    <None Remove="Assets\Textures\spr_menu_connecting_6.png" />
+    <None Remove="Assets\Textures\spr_menu_connecting_7.png" />
     <None Remove="Assets\Textures\spr_noisepalette_0.png" />
     <None Remove="Assets\Textures\spr_noisepalette_rage_0.png" />
     <None Remove="Assets\Textures\spr_peppalette_0.png" />
@@ -22,22 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Assets\Textures\spr_appattern1_0.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Assets\Textures\spr_connectap_0.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Assets\Textures\spr_noisepalette_0.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Assets\Textures\spr_noisepalette_rage_0.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Assets\Textures\spr_peppalette_0.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Assets\Textures\spr_ratmountpalette_0.png">
+    <EmbeddedResource Include="Assets\Textures\*.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>

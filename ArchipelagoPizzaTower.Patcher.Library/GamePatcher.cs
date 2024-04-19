@@ -1,4 +1,5 @@
-﻿using SixLabors.ImageSharp;
+﻿using ArchipelagoPizzaTower.Patcher.Library;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -15,9 +16,10 @@ namespace ArchpelagoPizzaTower.Patcher.Library
         public delegate void MessageHandlerDelegate(string message);
         public static MessageHandlerDelegate MessageHandler;
 
-        internal static UndertaleData? Data { get; set; }
+        internal static UndertaleData Data { get; set; }
+        internal static Dictionary<string, int> NameToPageItem { get; set; }
 
-        public static void Patch(string folderpath)
+        public static void Patch(string folderpath, bool excludeSkins = false)
         {
             Data = new UndertaleData();
             string dataPath = folderpath + @"\data.win";
@@ -41,7 +43,7 @@ namespace ArchpelagoPizzaTower.Patcher.Library
             MessageHandler($"DRM removed"); // no goddamn clue why the patches dont work if the game has a connection to steam lol
 
             MessageHandler($"Patching game");
-            PatchGame(folderpath);
+            PatchGame(folderpath, excludeSkins);
             MessageHandler($"Game patched");
 
             MessageHandler($"Patching lang files");
@@ -51,52 +53,57 @@ namespace ArchpelagoPizzaTower.Patcher.Library
         }
 
         // https://github.com/randovania/YAMS/blob/main/YAMS-LIB/Program.cs
-        public static void PatchGame(string folderpath)
+        public static void PatchGame(string folderpath, bool excludeSkins = false)
         {
             if (Data is null)
                 throw new ArgumentNullException("Mod data is not loaded");
             string dataPath = folderpath + @"\data.win";
 
-            void AddScript(string scriptName, string codeName, string code)
+            UndertaleString strName = Data.Strings.MakeString("PizzaTower_AP");
+            Data.GeneralInfo.FileName = strName;
+            Data.GeneralInfo.Name = strName;
+
+            ImportSprites();
+
+            if (!excludeSkins)
+                AddCustomSkins();
+
+            AddExtension(folderpath);
+
+            AddCustomInput();
+
+            ModifyMainMenu();
+
+            AddChatMenu();
+
+            using (FileStream fs = new FileInfo(dataPath).OpenWrite())
             {
-                Data.Scripts.Add(new UndertaleScript { Name = Data.Strings.MakeString(scriptName), Code = AddCode(codeName, code) });
+                UndertaleIO.Write(fs, Data, messageHandler: message => MessageHandler($"{message}"));
             }
-            UndertaleCode AddCode(string codeName, string code)
+        }
+
+        public static void PatchLang(string folderpath)
+        {
+            string origLangPath = folderpath + @"\lang\english.txt";
+            string extraLangPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/Assets/english.txt";
+
+            using (StreamReader reader = new(extraLangPath))
+            using (StreamWriter writer = new(origLangPath, true))
             {
-                UndertaleCode codeObject = new UndertaleCode();
-                codeObject.Name = Data.Strings.MakeString(codeName);
-                codeObject.ReplaceGML(code, Data);
-                Data.Code.Add(codeObject);
-                return codeObject;
+                writer.WriteLine();
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    writer.WriteLine(line);
+                }
             }
 
-            UndertaleGameObject AddObject(string name)
-            {
-                UndertaleGameObject gameObject = new()
-                {
-                    Name = Data.Strings.MakeString(name),
-                };
-                Data.GameObjects.Add(gameObject);
-                return gameObject;
-            }
-            void AddEvent(UndertaleGameObject gameObject, EventType eventType, uint eventSubType, string codeName, string code)
-            {
-                UndertaleCode script = AddCode(codeName, code);
-                UndertalePointerList<UndertaleGameObject.Event> events = gameObject.Events[(int)eventType];
-                UndertaleGameObject.EventAction gameEventAction = new()
-                {
-                    CodeId = script
-                };
-                UndertaleGameObject.Event gameEvent = new()
-                {
-                    EventSubtype = eventSubType
-                };
-                gameEvent.Actions.Add(gameEventAction);
-                events.Add(gameEvent);
-            }
 
-            #region Import all custom sprites
-            Dictionary<string, int> nameToPageItemDict = new();
+        }
+
+        private static void ImportSprites()
+        {
+            NameToPageItem = new();
             const int pageDimension = 1024;
             int lastUsedX = 0, lastUsedY = 0, currentShelfHeight = 0;
             Image<Rgba32> texturePageImage = new(pageDimension, pageDimension);
@@ -114,7 +121,7 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                 foreach (string filePath in Directory.GetFiles(dirPath))
                 {
                     string extension = new FileInfo(filePath).Extension;
-                    if (string.IsNullOrWhiteSpace(extension) || extension == ".md" || extension == ".txt") 
+                    if (string.IsNullOrWhiteSpace(extension) || extension == ".md" || extension == ".txt")
                         continue;
 
                     Image sprite = Image.Load(filePath);
@@ -143,7 +150,7 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                     pageItem.TexturePage = texturePage;
                     Data.TexturePageItems.Add(pageItem);
                     lastUsedX += sprite.Width + 1; // One pixel padding
-                    nameToPageItemDict.Add(Path.GetFileNameWithoutExtension(filePath), Data.TexturePageItems.Count - 1);
+                    NameToPageItem.Add(Path.GetFileNameWithoutExtension(filePath), Data.TexturePageItems.Count - 1);
 
                 }
             }
@@ -154,49 +161,35 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                 texturePage.TextureData = new UndertaleEmbeddedTexture.TexData { TextureBlob = ms.ToArray() };
             }
 
-            void ReplaceTexture(string textureName, string fileName) => Data.Sprites.ByName(textureName).Textures[0].Texture = Data.TexturePageItems[nameToPageItemDict[fileName]];
-            void AddTexture(string textureName, uint width, uint height, string fileName)
-            {
-                UndertaleSprite sprite = new()
-                {
-                    Name = Data.Strings.MakeString(textureName),
-                    Height = height,
-                    Width = width,
-                    MarginRight = (int)(height - 1),
-                    MarginBottom = (int)(width - 1),
-                    OriginX = 0,
-                    OriginY = 0
-                };
-                UndertaleSprite.TextureEntry texture = new();
-                texture.Texture = Data.TexturePageItems[nameToPageItemDict[fileName]];
-                sprite.Textures.Add(texture);
-                Data.Sprites.Add(sprite);
-            }
-
             MessageHandler($"Sprites imported");
-            #endregion
+        }
 
-            #region Add custom skins
-            ReplaceTexture("spr_peppalette", "spr_peppalette_0");
-            ReplaceTexture("spr_ratmountpalette", "spr_ratmountpalette_0");
-            ReplaceTexture("spr_noisepalette", "spr_noisepalette_0");
-            ReplaceTexture("spr_noisepalette_rage", "spr_noisepalette_rage_0");
+        private static void AddCustomSkins()
+        {
+            HelperMethods.ReplaceTexture("spr_peppalette", "spr_peppalette_0");
+            HelperMethods.ReplaceTexture("spr_ratmountpalette", "spr_ratmountpalette_0");
+            HelperMethods.ReplaceTexture("spr_noisepalette", "spr_noisepalette_0");
+            HelperMethods.ReplaceTexture("spr_noisepalette_rage", "spr_noisepalette_rage_0");
 
-            AddTexture("spr_appattern1", 19, 18, "spr_appattern1_0");
+            HelperMethods.AddTexture("spr_appattern1", 19, 18, "spr_appattern1_0");
 
 
             Data.Code.ByName("gml_Object_obj_palettedresser_Create_0").AppendGML(@"
-                array_push(player_palettes[0], [""ap_blue"", 1, 16])
-                array_push(player_palettes[1], [""ap_blue"", 1, 29])
-                array_push(player_palettes[0], [""ap_color"", 1, 12, asset_get_index(""spr_appattern1"")])
-                array_push(player_palettes[1], [""ap_color"", 1, 12, asset_get_index(""spr_appattern1"")])
+array_push(player_palettes[0], [""ap_blue"", 1, 16])
+array_push(player_palettes[1], [""ap_blue"", 1, 29])
+array_push(player_palettes[0], [""ap_color"", 1, 12, asset_get_index(""spr_appattern1"")])
+array_push(player_palettes[1], [""ap_color"", 1, 12, asset_get_index(""spr_appattern1"")])
             ", Data);
 
+            Data.Scripts.ByName("gml_Script_scr_get_texture_array").Code = HelperMethods.AddCode("gml_Script_scr_get_texture_array_archipelago", @"
+return [[""ap_color"", asset_get_index(""spr_appattern1"")], [""funny"", 4398], [""itchy"", 511], [""pizza"", 3125], [""stripes"", 1806], [""goldemanne"", 4065], [""bones"", 4322], [""pp"", 4293], [""war"", 917], [""john"", 4315], [""candy"", 4546], [""bloodstained"", 2999], [""bat"", 3635], [""pumpkin"", 1988], [""fur"", 2047], [""flesh"", 4577], [""racer"", 699], [""comedian"", 656], [""banana"", 4035], [""noiseTV"", 3629], [""madman"", 4488], [""bubbly"", 3863], [""welldone"", 2633], [""grannykisses"", 1930], [""towerguy"", 2277]];
+            ");
+
             MessageHandler($"Custom skins added");
-            #endregion
+        }
 
-            #region Impelement Archipelago .dll
-
+        private static void AddExtension(string folderPath)
+        {
             UndertaleExtension apExtension = new()
             {
                 Name = Data.Strings.MakeString("ArchipelagoPizzaTower.GameMakerExtension"),
@@ -215,303 +208,366 @@ namespace ArchpelagoPizzaTower.Patcher.Library
             };
             apExtension.Files.Add(extensionFile);
 
-            void AddFunction(string name, UndertaleExtensionVarType returnType, params UndertaleExtensionVarType[] argumentTypes)
-            {
-                UndertaleSimpleList<UndertaleExtensionFunctionArg> arguments = new();
-                foreach (UndertaleExtensionVarType arg in argumentTypes)
-                {
-                    arguments.Add(new() { Type = arg });
-                }
-                UndertaleExtensionFunction function = new()
-                {
-                    Name = Data.Strings.MakeString(name),
-                    ExtName = Data.Strings.MakeString(name),
-                    Kind = 11,
-                    ID = Data.ExtensionFindLastId(),
-                    RetType = returnType,
-                    Arguments = arguments
-                };
-                extensionFile.Functions.Add(function);
-            }
+            extensionFile.AddFunction("ap_connect", UndertaleExtensionVarType.Double, UndertaleExtensionVarType.String);
+            extensionFile.AddFunction("ap_disconnect", UndertaleExtensionVarType.Double);
+            extensionFile.AddFunction("ap_connect_slot", UndertaleExtensionVarType.Double, UndertaleExtensionVarType.String, UndertaleExtensionVarType.String, UndertaleExtensionVarType.Double);
+            extensionFile.AddFunction("ap_poll", UndertaleExtensionVarType.Double);
+            extensionFile.AddFunction("ap_get_state", UndertaleExtensionVarType.Double);
+            extensionFile.AddFunction("ap_wants_deathlink", UndertaleExtensionVarType.Double);
 
-            AddFunction("ap_connect", UndertaleExtensionVarType.Double, UndertaleExtensionVarType.String);
-            AddFunction("ap_connect_slot", UndertaleExtensionVarType.Double, UndertaleExtensionVarType.String, UndertaleExtensionVarType.String, UndertaleExtensionVarType.Double);
-            AddFunction("ap_poll", UndertaleExtensionVarType.Double);
-            AddFunction("ap_get_state", UndertaleExtensionVarType.Double);
-            AddFunction("ap_wants_deathlink", UndertaleExtensionVarType.Double);
+            File.Copy(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/Assets/ArchipelagoPizzaTower.GameMakerExtension.dll", folderPath + @"\ArchipelagoPizzaTower.GameMakerExtension_x64.dll");
 
-            File.Copy(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/Assets/ArchipelagoPizzaTower.GameMakerExtension.dll", folderpath + @"\ArchipelagoPizzaTower.GameMakerExtension_x64.dll");
+            UndertaleGameObject apObject = HelperMethods.AddObject("obj_archipelago");
+            apObject.AddEvent(EventType.Create, 0, "gml_Object_obj_archipelago_Create_0", @"
+persistent = true 
+
+ip_address = """"
+ip_port = """"
+name = """"
+password = """"
+
+sent_info = false
+            ");
+            apObject.AddEvent(EventType.Alarm, 0, "gml_Object_obj_archipelago_Alarm_0", @"
+ap_connect(ip_address + "":"" + ip_port)
+            ");
+
+            apObject.AddEvent(EventType.Step, (int)EventSubtypeStep.Step, "gml_Object_obj_archipelago_Step_0", @"
+ap_poll()
+if (ap_get_state() == 3 and !sent_info)
+{
+    ap_connect_slot(name, password, ap_wants_deathlink())
+    sent_info = true
+}
+            ");
 
             MessageHandler($"Added Archipelago extension");
+        }
 
-            UndertaleGameObject apObject = AddObject("obj_archipelago");
-            AddEvent(apObject, EventType.Create, 0, "gml_Object_obj_archipelago_Create_0", @"
-                persistent = true 
-
-                ip_address = """"
-                ip_port = """"
-                name = """"
-                password = """"
-
-                sent_info = false
+        private static void AddCustomInput()
+        {
+            UndertaleGameObject customInput = HelperMethods.AddObject("obj_custominput");
+            customInput.AddEvent(EventType.Create, 0, "gml_Object_obj_custominput_Create_0", @"
+enabled_chars = @""ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.:!0123456789?'\ÁÉÍÓÚáéíóú_-[]▼()&#风雨廊桥전태양*яиБжидГзв¡¿Ññ "" + ""\""""
+blinking = true
+pointer_position = 0
+blink_speed = 30
+alarm[0] = blink_speed
+text = """"
+keyboard_string = """"
+text_limit = 64
             ");
-            AddEvent(apObject, EventType.Alarm, 0, "gml_Object_obj_archipelago_Alarm_0", @"
-                ap_connect(ip_address + "":"" + ip_port)
+            customInput.AddEvent(EventType.Alarm, 0, "gml_Object_obj_custominput_Alarm_0", @"
+blinking = !blinking
+alarm[0] = blink_speed
             ");
-
-            AddEvent(apObject, EventType.Step, (int)EventSubtypeStep.Step, "gml_Object_obj_archipelago_Step_0", @"
-                ap_poll()
-                if (ap_get_state() == 3 and !sent_info)
-                {
-                    ap_connect_slot(name, password, ap_wants_deathlink())
-                    fmod_event_one_shot(""event:/sfx/ui/lightswitch"");
-                    sent_info = true
-                }
+            customInput.AddEvent(EventType.Step, (int)EventSubtypeStep.EndStep, "gml_Object_obj_custominput_Step_2", @"
+                
             ");
+            customInput.AddEvent(EventType.KeyPress, (int)EventSubtypeKey.vk_anykey, "gml_Object_obj_custominput_KeyPress_1", @"
+blinking = true
+alarm[0] = blink_speed
 
-            #endregion
+if keyboard_check(vk_control)
+{
+    if (keyboard_check(ord(""V"")))
+    {
+        text = string_insert(clipboard_get_text(), text, pointer_position + 1)
+        pointer_position += string_length(clipboard_get_text())
+    }
+}
+else
+{
+    if keyboard_check(vk_backspace)
+    {
+        text = string_delete(text, pointer_position, 1)
+        pointer_position -= 1
+    }
+    else if keyboard_check(vk_left)
+    {
+        pointer_position -= 1
+    }
+    else if keyboard_check(vk_right)
+    {
+        pointer_position += 1
+    }
+    else
+    {
+        text = string_insert(string_copy(keyboard_string, string_length(keyboard_string), 1), text, pointer_position + 1)
+        pointer_position += 1
+    }
+}
 
-            #region Custom input typing
-            UndertaleGameObject customInput = AddObject("obj_custominput");
-            AddEvent(customInput, EventType.Create, 0, "gml_Object_obj_custominput_Create_0", @"
-                enabled_chars = @""ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.:!0123456789?'\ÁÉÍÓÚáéíóú_-[]▼()&#风雨廊桥전태양*яиБжидГзв¡¿Ññ "" + ""\""""
-                blinking = true
-                blink_speed = 15
-                alarm[0] = blink_speed
-                text = """"
-                keyboard_string = """"
-            ");
-            AddEvent(customInput, EventType.Alarm, 0, "gml_Object_obj_custominput_Alarm_0", @"
-                blinking = !blinking
-                alarm[0] = blink_speed
-            ");
-            AddEvent(customInput, EventType.KeyPress, (int)EventSubtypeKey.vk_anykey, "gml_Object_obj_custominput_KeyPress_1", @"
-                blinking = true
-                blink_speed = 15
-
-                if keyboard_check(vk_control)
-                {
-                    if (keyboard_check(ord(""V"")))
-                        text += clipboard_get_text();
-                }
-                else
-                {
-                    if keyboard_check(vk_backspace)
-                    {
-                        text = string_copy(text, 1, string_length(text) - 1);
-                    }
-                    else
-                    {
-                        text += keyboard_string
-                    }
-                }
-
-                for (var i = 1; i < string_length(text); i++)
-                {
-                    var letter = string_char_at(text, i)
-                    if string_pos(letter, enabled_chars) == 0
-                    {
-                        text = string_replace_all(text, letter, """");
-                    }
-                }
-                text = string_copy(text, 1, 64);
-                keyboard_string = """"
+for (var i = 1; i < string_length(text); i++)
+{
+    var letter = string_char_at(text, i)
+    if string_pos(letter, enabled_chars) == 0
+    {
+        text = string_replace_all(text, letter, """");
+    }
+}
+text = string_copy(text, 1, text_limit);
+pointer_position = clamp(pointer_position, 0, string_length(text))
+keyboard_string = """"
             ");
 
             MessageHandler($"Added custom input object");
-            #endregion
+        }
 
-            #region Main menu addition
+        private static void ModifyMainMenu()
+        {
             Data.Code.ByName("gml_Object_obj_mainmenu_Create_0").AppendGML(@"
-                connectselect = 0
-                is_typing = false
-                ap_ip = """"
-                ap_port = """"
-                ap_name = """"
-                ap_password = """"
-                text_input = instance_create(0, 0, obj_custominput)
+connectselect = 0
+is_typing = false
 
-                did_tip = false
+ini_open_from_string(obj_savesystem.ini_str_options)
+ap_ip = ini_read_string(""Archipelago"", ""ip_address"", """")
+ap_port = ini_read_string(""Archipelago"", ""ip_port"", """")
+ap_name = ini_read_string(""Archipelago"", ""slot_name"", """")
+ap_password = ini_read_string(""Archipelago"", ""password"", """")
+obj_savesystem.ini_str_options = ini_close()
+
+text_input = instance_create(0, 0, obj_custominput)
+
+did_tip = false
             ", Data);
 
-
             Data.Code.ByName("gml_Object_obj_mainmenu_Step_0").AppendGML(@"
-                if (state == 0 << 0)
-                {
-                    if (keyboard_check_pressed(vk_f1))
-                    {
-                        connectselect = 0
-                        state = 1812 << 0
-				        switch currentselect
-				        {
-					        case 0:
-						        sprite_index = spr_titlepep_left
-						        break
-					        case 1:
-						        sprite_index = spr_titlepep_middle
-						        break
-					        case 2:
-						        sprite_index = spr_titlepep_right
-						        break
-                        }
-                    }
-                }
-                else if (state == 1812 << 0)
-                {
-                    if (!did_tip)
-                    {
-                        with (create_transformation_tip(lang_get_value(""menu_apmenutip"")))
-                        {
-                            alarm[1] = 330;
-                        }
-                        did_tip = true;
-                    }
+if (state == 0 << 0)
+{
+    if (keyboard_check_pressed(vk_f1))
+    {
+        fmod_event_one_shot(""event:/sfx/enemies/ufolivelaser"");
+        connectselect = 0
+        state = 1812 << 0
+		switch currentselect
+		{
+			case 0:
+				sprite_index = spr_titlepep_left
+				break
+			case 1:
+				sprite_index = spr_titlepep_middle
+				break
+			case 2:
+				sprite_index = spr_titlepep_right
+				break
+        }
+    }
+}
+else if (state == 1812 << 0)
+{
+    if (!did_tip)
+    {
+        with (create_transformation_tip(lang_get_value(""menu_apmenutip"")))
+        {
+            alarm[1] = 330;
+        }
+        did_tip = true;
+    }
 
-                    if (is_typing)
-                    {
-                        switch(connectselect)
-                        {
-                            case 0:
-                                ap_ip = text_input.text
-                                break
-                            case 1:
-                                ap_port = text_input.text
-                                break
-                            case 2:
-                                ap_name = text_input.text
-                                break
-                            case 3:
-                                ap_password = text_input.text
-                                break
-                        }
+    if (is_typing)
+    {
+        switch(connectselect)
+        {
+            case 0:
+                ap_ip = text_input.text
+                break
+            case 1:
+                ap_port = text_input.text
+                break
+            case 2:
+                ap_name = text_input.text
+                break
+            case 3:
+                ap_password = text_input.text
+                break
+        }
                         
-                        if (keyboard_check_pressed(vk_enter))
-                        {
-                            is_typing = false
-                        }
+        if (keyboard_check_pressed(vk_enter))
+        {
+            is_typing = false
+            fmod_event_one_shot(""event:/sfx/ui/step"")
+        }
+    }
+    else
+    {
+        connectselect += key_down2 - key_up2
+        connectselect = clamp(connectselect, 0, 5)
+                    
+        if keyboard_check_pressed(vk_enter) or key_jump
+        {
+            keyboard_string = """"
+            switch(connectselect)
+            {
+                case 0:
+                    fmod_event_one_shot(""event:/sfx/ui/step"")
+                    is_typing = true
+                    text_input.text = ap_ip
+                    text_input.pointer_position = 64
+                    break
+                case 1:
+                    fmod_event_one_shot(""event:/sfx/ui/step"")
+                    is_typing = true
+                    text_input.text  = ap_port
+                    text_input.pointer_position = 64
+                    break
+                case 2:
+                    fmod_event_one_shot(""event:/sfx/ui/step"")
+                    is_typing = true
+                    text_input.text  = ap_name
+                    text_input.pointer_position = 64
+                    break
+                case 3:
+                    fmod_event_one_shot(""event:/sfx/ui/step"")
+                    is_typing = true
+                    text_input.text  = ap_password
+                    text_input.pointer_position = 64
+                    break
+                case 4:
+                    if (ap_get_state() == 4)
+                    {
+                        ap_disconnect()
+                        instance_destroy(obj_archipelago)
+                        fmod_event_one_shot(""event:/sfx/misc/collect"")
                     }
                     else
                     {
-                        connectselect += key_down2 - key_up2
-                        connectselect = clamp(connectselect, 0, 5)
-                    
-                        if keyboard_check_pressed(vk_enter) or key_jump
-                        {
-                            keyboard_string = """"
-                            switch(connectselect)
-                            {
-                                case 0:
-                                    is_typing = true
-                                    text_input.text = ap_ip
-                                    break
-                                case 1:
-                                    is_typing = true
-                                    text_input.text  = ap_port
-                                    break
-                                case 2:
-                                    is_typing = true
-                                    text_input.text  = ap_name
-                                    break
-                                case 3:
-                                    is_typing = true
-                                    text_input.text  = ap_password
-                                    break
-                                case 4:
-                                    ap_connect(ap_ip + "":"" + ap_port)
-                                    var archipelago = instance_create(0, 0, obj_archipelago)
-                                    archipelago.name = ap_name
-                                    archipelago.password = ap_password
-                                    state = 1912 << 0
-                                    break
-                                case 5:
-                                    state = 0 << 0
-                                    break
-                            }
-                        }
+                        ap_connect(ap_ip + "":"" + ap_port)
+                        var archipelago = instance_create(0, 0, obj_archipelago)
+                        archipelago.name = ap_name
+                        archipelago.password = ap_password
+                        state = 1912 << 0
                     }
-                }
-                else if (state == 1912 << 0)
-                {
-                    
-                }
-            ", Data);
-
-            AddTexture("spr_connectap", 104, 66, "spr_connectap_0");
-            Data.Code.ByName("gml_Object_obj_mainmenu_Draw_0").AppendGML(@"
-                draw_set_alpha(extrauialpha)
-                lang_draw_sprite(asset_get_index(""spr_connectap""), 0, 400, 5)
-                scr_draw_text_arr(440, 40, scr_compile_icon_text(""[y]""), c_white, extrauialpha)
-                draw_set_alpha(1)
-            ", Data);
-
-            Data.Code.ByName("gml_Object_obj_mainmenu_Draw_64").AppendGML(@"
-                
-                if (state == 1812 << 0)
-                {
-                    draw_set_alpha(0.5)
-                    draw_rectangle_color(0, 0, room_width, room_height, c_black, c_black, c_black, c_black, 0)
-                    draw_set_alpha(1)
-                    draw_set_font(lang_get_font(""bigfont""))
-                    draw_set_halign(fa_center)
-                    draw_set_valign(fa_middle)
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) - 150, lang_get_value(""menu_archipelago""), c_white, c_white, c_white, c_white, 1)
-
-                    c0 = (connectselect == 0) ? c_white : c_gray;
-                    c1 = (connectselect == 1) ? c_white : c_gray;
-                    c2 = (connectselect == 2) ? c_white : c_gray;
-                    c3 = (connectselect == 3) ? c_white : c_gray;
-                    c4 = (connectselect == 4) ? c_white : c_gray;
-                    c5 = (connectselect == 5) ? c_white : c_gray;
-
-                    draw_set_font(lang_get_font(""creditsfont""))
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 0,embed_value_string(lang_get_value(""menu_apip""), [ap_ip]), c0, c0, c0, c0, 1)
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 30, embed_value_string(lang_get_value(""menu_apport""), [ap_port]), c1, c1, c1, c1, 1)
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 60, embed_value_string(lang_get_value(""menu_apname""), [ap_name]), c2, c2, c2, c2, 1)
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 90, embed_value_string(lang_get_value(""menu_appass""), [ap_password]), c3, c3, c3, c3, 1)
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 120, lang_get_value(""menu_apconnect""), c4, c4, c4, c4, 1)
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 150, lang_get_value(""menu_apleave""), c5, c5, c5, c5, 1)
-                    draw_set_font(lang_get_font(""bigfont""))
-                }
-                else if (state == 1912 << 0)
-                {
-                    draw_set_alpha(0.7)
-                    draw_rectangle_color(0, 0, room_width, room_height, c_black, c_black, c_black, c_black, 0)
-                    draw_set_alpha(1)
-                    draw_set_font(lang_get_font(""bigfont""))
-                    draw_set_halign(fa_center)
-                    draw_set_valign(fa_middle)
-
-                    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2), ap_get_state(), c_white, c_white, c_white, c_white, 1)
-                }
-                
-            ", Data);
-
-            MessageHandler($"Added new submenu to main menu");
-            #endregion
-
-            using (FileStream fs = new FileInfo(dataPath).OpenWrite())
-            {
-                UndertaleIO.Write(fs, Data, messageHandler: message => MessageHandler($"{message}"));
+                    break
+                case 5:
+                    ini_open_from_string(obj_savesystem.ini_str_options)
+                    ini_write_string(""Archipelago"", ""ip_address"", ap_ip)
+                    ini_write_string(""Archipelago"", ""ip_port"", ap_port)
+                    ini_write_string(""Archipelago"", ""slot_name"", ap_name)
+                    ini_write_string(""Archipelago"", ""password"", ap_password)
+                    obj_savesystem.ini_str_options = ini_close()
+                    gamesave_async_save_options()
+                    state = 0 << 0
+                    break
             }
         }
+    }
+}
+else if (state == 1912 << 0)
+{
+    if ap_get_state() == 4
+    {
+        state = 0 << 0
+        fmod_event_one_shot(""event:/sfx/misc/collecttoppin"")
+    }
+    if (key_jump)
+    {
+        state = 0 << 0
+        ap_disconnect()
+        instance_destroy(obj_archipelago)
+        fmod_event_one_shot(""event:/sfx/misc/collect"")
+    }
+}
+            ", Data);
 
-        public static void PatchLang(string folderpath)
+            HelperMethods.AddTexture("spr_connectap", 104, 66, "spr_connectap_0");
+            Data.Code.ByName("gml_Object_obj_mainmenu_Draw_0").AppendGML(@"
+draw_set_alpha(extrauialpha)
+lang_draw_sprite(asset_get_index(""spr_connectap""), 0, 400, 5)
+scr_draw_text_arr(440, 40, scr_compile_icon_text(""[y]""), c_white, extrauialpha)
+draw_set_alpha(1)
+            ", Data);
+
+            HelperMethods.AddTexture("spr_menu_archipelago", 70, 83, "spr_menu_archipelago_0", "spr_menu_archipelago_1", "spr_menu_archipelago_2");
+            HelperMethods.AddTexture("spr_menu_connecting", 111, 103, "spr_menu_connecting_0", "spr_menu_connecting_1", "spr_menu_connecting_2", "spr_menu_connecting_3", "spr_menu_connecting_4", "spr_menu_connecting_5", "spr_menu_connecting_6", "spr_menu_connecting_7");
+            HelperMethods.AddTexture("spr_creditsfont_cursor", 8, 30, "spr_creditsfont_cursor_0");
+            Data.Code.ByName("gml_Object_obj_mainmenu_Draw_64").AppendGML(@"       
+if (state == 1812 << 0)
+{
+    draw_set_alpha(0.5)
+    draw_rectangle_color(0, 0, room_width, room_height, c_black, c_black, c_black, c_black, 0)
+    draw_set_alpha(1)
+    draw_set_font(lang_get_font(""bigfont""))
+    draw_set_halign(fa_center)
+    draw_set_valign(fa_middle)
+
+    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) - 150, lang_get_value(""menu_archipelago""), c_white, c_white, c_white, c_white, 1)
+
+    draw_sprite(spr_menu_archipelago, index, (obj_screensizer.actual_width / 2) + 120 + 210 - 35, (obj_screensizer.actual_height / 2) - 150 - 41)
+	draw_sprite(spr_menu_archipelago, index, (obj_screensizer.actual_width / 2) - 120 - 210 - 35, (obj_screensizer.actual_height / 2) - 150 - 41)
+
+    c0 = (connectselect == 0) ? c_white : c_gray
+    c1 = (connectselect == 1) ? c_white : c_gray
+    c2 = (connectselect == 2) ? c_white : c_gray
+    c3 = (connectselect == 3) ? c_white : c_gray
+    c4 = (connectselect == 4) ? c_white : c_gray
+    c5 = (connectselect == 5) ? c_white : c_gray
+
+    draw_set_font(lang_get_font(""creditsfont""))
+    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 0, embed_value_string(lang_get_value(""menu_apip""), [ap_ip]), c0, c0, c0, c0, 1)
+    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 30, embed_value_string(lang_get_value(""menu_apport""), [ap_port]), c1, c1, c1, c1, 1)
+    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 60, embed_value_string(lang_get_value(""menu_apname""), [ap_name]), c2, c2, c2, c2, 1)
+    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 90, embed_value_string(lang_get_value(""menu_appass""), [ap_password]), c3, c3, c3, c3, 1)
+    if ap_get_state() == 4
+        tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 120, lang_get_value(""menu_apdisconnect""), c4, c4, c4, c4, 1)
+    else
+        tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 120, lang_get_value(""menu_apconnect""), c4, c4, c4, c4, 1)
+    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 150, lang_get_value(""menu_apleave""), c5, c5, c5, c5, 1)
+                    
+    if (is_typing and text_input.blinking)
+    {
+        switch (connectselect)
         {
-            string origLangPath = folderpath + @"\lang\english.txt";
-            string extraLangPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/Assets/english.txt";
+            case 0:
+                var str = embed_value_string(lang_get_value(""menu_apip""), [ap_ip])
+                var text_width = string_width(string_copy(str, 1, text_input.pointer_position + 11)) - string_width(str) / 2
+                draw_sprite(spr_creditsfont_cursor, 0, (obj_screensizer.actual_width / 2) + text_width - 4, (obj_screensizer.actual_height / 2) - 7.5)
+                break
+            case 1:
+                var str = embed_value_string(lang_get_value(""menu_apport""), [ap_port])
+                var text_width = string_width(string_copy(str, 1, text_input.pointer_position + 5)) - string_width(str) / 2
+                draw_sprite(spr_creditsfont_cursor, 0, (obj_screensizer.actual_width / 2) + text_width - 4, (obj_screensizer.actual_height / 2) + 30 - 7.5)
+                break
+            case 2:
+                var str = embed_value_string(lang_get_value(""menu_apname""), [ap_name])
+                var text_width = string_width(string_copy(str, 1, text_input.pointer_position + 10)) - string_width(str) / 2
+                draw_sprite(spr_creditsfont_cursor, 0, (obj_screensizer.actual_width / 2) + text_width - 4, (obj_screensizer.actual_height / 2) + 60 - 7.5)
+                break
+            case 3:
+                var str = embed_value_string(lang_get_value(""menu_appass""), [ap_password])
+                var text_width = string_width(string_copy(str, 1, text_input.pointer_position + 9)) - string_width(str) / 2
+                draw_sprite(spr_creditsfont_cursor, 0, (obj_screensizer.actual_width / 2) + text_width - 4, (obj_screensizer.actual_height / 2) + 90 - 7.5)
+                break
+        }
+    }
+                    
+    draw_set_font(lang_get_font(""bigfont""))
+}
+else if (state == 1912 << 0)
+{
+    draw_set_alpha(0.7)
+    draw_rectangle_color(0, 0, room_width, room_height, c_black, c_black, c_black, c_black, 0)
+    draw_set_alpha(1)
+    draw_set_font(lang_get_font(""bigfont""))
+    draw_set_halign(fa_center)
+    draw_set_valign(fa_middle)
 
-            using (StreamReader reader = new(extraLangPath))
-            using (StreamWriter writer = new(origLangPath, true))
-            {
-                writer.WriteLine();
-                string line;
-                while ((line = reader.ReadLine()) != null)
-                {
-                    writer.WriteLine(line);
-                }
-            }
+    draw_sprite(spr_menu_connecting, index * 2, (obj_screensizer.actual_width / 2) - 55.5, (obj_screensizer.actual_height / 2) - 51.5)
 
+    tdp_draw_text_color(obj_screensizer.actual_width / 2, (obj_screensizer.actual_height / 2) + 120, lang_get_value(""menu_apcancel""), c_white, c_white, c_white, c_white, 1)
+}
+", Data);
 
+            MessageHandler($"Added new submenu to main menu");
+        }
+
+        private static void AddChatMenu()
+        {
+            Data.Code.ByName("gml_Object_obj_debugcontroller_Create_0").ReplaceGML(@"
+                instance_destroy()
+            ", Data);
+
+            UndertaleGameObject chatMenu = HelperMethods.AddObject("obj_apchatmenu");
         }
     }
 }

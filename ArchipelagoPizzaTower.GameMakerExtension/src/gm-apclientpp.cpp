@@ -41,6 +41,20 @@ double ap_connect(const char* uri)
 	return 1;
 }
 
+double ap_disconnect()
+{
+	const std::lock_guard<std::mutex> lock(mutex);
+	try
+	{
+		ap_client.reset(nullptr);
+	}
+	catch (...)
+	{
+		return 0;
+	}
+	return 1;
+}
+
 double ap_connect_slot(const char* name, const char* password, double deathlink)
 {
 	const std::lock_guard<std::mutex> lock(mutex);
