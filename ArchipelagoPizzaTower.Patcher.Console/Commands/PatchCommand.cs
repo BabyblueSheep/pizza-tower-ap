@@ -11,18 +11,18 @@ using static ArchipelagoPizzaTower.Patcher.Commands.PatchCommand;
 
 namespace ArchipelagoPizzaTower.Patcher.Commands
 {
-    [Description("Patches Pizza Tower to have base randomizer functionality.")]
+    [Description("Patches Pizza Tower to have base randomizer functionality")]
     public sealed class PatchCommand : Command<PatchSettings>
     {
         public sealed class PatchSettings : CommandSettings
         {
             [CommandArgument(0, "[FOLDERPATH]")]
-            [Description("The location path of the Pizza Tower folder.")]
+            [Description("The location path of the Pizza Tower folder")]
             public string FolderPath { get; set; }
 
             [CommandOption("-s|--exclude-skins|--no-skins")]
-            [DefaultValue(true)]
-            [Description("Whether custom skins shouldn't be added or not. Use if you're planning on using other skin mods.")]
+            [DefaultValue(false)]
+            [Description("Whether custom skins shouldn't be added or not. Use if you're planning on using other skin mods")]
             public bool ExcludeSkins { get; set; }
         }
 

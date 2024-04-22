@@ -97,8 +97,6 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                     writer.WriteLine(line);
                 }
             }
-
-
         }
 
         private static void ImportSprites()
@@ -568,6 +566,82 @@ else if (state == 1912 << 0)
             ", Data);
 
             UndertaleGameObject chatMenu = HelperMethods.AddObject("obj_apchatmenu");
+
+            chatMenu.AddEvent(EventType.Create, 0, "gml_Object_obj_chatmenu_Create_0", @"
+persistent = true
+depth = -1111
+
+offset_x = 0
+offset_y = 0
+active = false
+            ");
+            chatMenu.AddEvent(EventType.Step, (int)EventSubtypeStep.Step, "gml_Object_obj_chatmenu_Step_0", @"
+offset_x -= 1
+offset_y -= 1
+            ");
+
+            Data.Code.ByName("gml_Room_Loadiingroom_Create").AppendGML(@"
+global.chatmenu = instance_create_unique(0, 0, obj_apchatmenu)
+            ", Data);
+            Data.Code.ByName("gml_Room_Mainmenu_Create").AppendGML(@"
+global.chatmenu.active = false
+            ", Data);
+            Data.Code.ByName("gml_Room_tower_entrancehall_Create").AppendGML(@"
+global.chatmenu.active = true
+            ", Data);
+
+            HelperMethods.AddShader("shd_scrolling_offset", @"
+attribute vec3 in_Position;                  // (x,y,z)
+attribute vec4 in_Colour;                    // (r,g,b,a)
+attribute vec2 in_TextureCoord;              // (u,v)
+
+varying vec2 v_vTexcoord;
+varying vec4 v_vColour;
+
+void main()
+{
+    vec4 object_space_pos = vec4( in_Position.x, in_Position.y, in_Position.z, 1.0);
+    gl_Position = gm_Matrices[MATRIX_WORLD_VIEW_PROJECTION] * object_space_pos;
+    
+    v_vColour = in_Colour;
+    v_vTexcoord = in_TextureCoord;
+}
+            ", @"
+varying vec2 v_vTexcoord;
+varying vec4 v_vColour;
+
+uniform vec2 u_resolution;
+uniform vec2 u_offset;
+
+void main()
+{
+    vec2 coords = v_vTexcoord;
+    coords.y *= u_resolution.y / u_resolution.x;
+    gl_FragColor = v_vColour * texture2D( gm_BaseTexture, v_vTexcoord + u_offset);
+}
+            ");
+            HelperMethods.AddTexture("spr_chatbg", 200, 200, "spr_chatbg_0");
+
+            chatMenu.AddEvent(EventType.Draw, (int)EventSubtypeDraw.DrawGUI, "gml_Object_obj_chatmenu_Draw_64", @"
+if (active)
+{
+    draw_set_colour(c_white)
+    
+    shader_set(asset_get_index(""shd_scrolling_offset""))
+    shader_set_uniform_f(shader_get_uniform(asset_get_index(""shd_scrolling_offset""), ""u_resolution""), 200, 300);
+    shader_set_uniform_f(shader_get_uniform(asset_get_index(""shd_scrolling_offset""), ""u_offset""), offset_x, offset_y);
+
+    var _tex = sprite_get_texture(asset_get_index(""spr_chatbg""), 0)
+    draw_primitive_begin_texture(pr_trianglestrip, _tex)
+    draw_vertex_texture(0, 0, 0, 0)
+    draw_vertex_texture(200, 0, 1, 0)
+    draw_vertex_texture(0, 300, 0, 1)
+    draw_vertex_texture(200, 300, 1, 1)
+    draw_primitive_end()
+    
+    shader_reset()
+}
+            ");
         }
     }
 }
