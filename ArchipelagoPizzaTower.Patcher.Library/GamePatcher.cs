@@ -102,7 +102,7 @@ namespace ArchpelagoPizzaTower.Patcher.Library
         private static void ImportSprites()
         {
             NameToPageItem = new();
-            const int pageDimension = 1024;
+            const int pageDimension = 2048;
             int lastUsedX = 0, lastUsedY = 0, currentShelfHeight = 0;
             Image<Rgba32> texturePageImage = new(pageDimension, pageDimension);
             UndertaleEmbeddedTexture? texturePage = new();
@@ -140,7 +140,7 @@ namespace ArchpelagoPizzaTower.Patcher.Library
                     int xCoord = lastUsedX;
                     int yCoord = lastUsedY;
                     texturePageImage.Mutate(i => i.DrawImage(sprite, new Point(xCoord, yCoord), 1));
-                    UndertaleTexturePageItem pageItem = new UndertaleTexturePageItem();
+                    UndertaleTexturePageItem pageItem = new();
                     pageItem.SourceX = (ushort)xCoord;
                     pageItem.SourceY = (ushort)yCoord;
                     pageItem.SourceWidth = pageItem.TargetWidth = pageItem.BoundingWidth = (ushort)sprite.Width;
@@ -561,6 +561,45 @@ else if (state == 1912 << 0)
 
         private static void AddChatMenu()
         {
+            #region Hatred
+            Image<Rgba32> texturePageImage = new(200, 200);
+            UndertaleEmbeddedTexture? texturePage = new();
+            texturePage.TextureHeight = texturePage.TextureWidth = 200;
+            Data.EmbeddedTextures.Add(texturePage);
+
+            Image image = Image.Load(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/Assets/spr_chatbg_0.png");
+            texturePageImage.Mutate(i => i.DrawImage(image, new Point(0, 0), 1));
+
+            UndertaleTexturePageItem pageItem = new();
+            pageItem.SourceX = 0;
+            pageItem.SourceY = 0;
+            pageItem.SourceWidth = pageItem.TargetWidth = pageItem.BoundingWidth = (ushort)image.Width;
+            pageItem.SourceHeight = pageItem.TargetHeight = pageItem.BoundingHeight = (ushort)image.Height;
+            pageItem.TexturePage = texturePage;
+            Data.TexturePageItems.Add(pageItem);
+
+            UndertaleSprite sprite = new()
+            {
+                Name = Data.Strings.MakeString("spr_chatbg"),
+                Height = 200,
+                Width = 200,
+                MarginRight = 199,
+                MarginBottom = 199,
+                OriginX = 0,
+                OriginY = 0
+            };
+            UndertaleSprite.TextureEntry texture = new();
+            texture.Texture = Data.TexturePageItems.Last();
+            sprite.Textures.Add(texture);
+            Data.Sprites.Add(sprite);
+
+            using (MemoryStream ms = new MemoryStream())
+            {
+                texturePageImage.Save(ms, PngFormat.Instance);
+                texturePage.TextureData = new UndertaleEmbeddedTexture.TexData { TextureBlob = ms.ToArray() };
+            }
+            #endregion
+
             Data.Code.ByName("gml_Object_obj_debugcontroller_Create_0").ReplaceGML(@"
                 instance_destroy()
             ", Data);
@@ -571,75 +610,133 @@ else if (state == 1912 << 0)
 persistent = true
 depth = -1111
 
+var offset_shader = asset_get_index(""sh_scrolling_offset"")
+uni_offset = shader_get_uniform(offset_shader, ""u_offset"")
+uni_res = shader_get_uniform(offset_shader, ""u_resolution"")
+
 offset_x = 0
 offset_y = 0
+
+start_height = 0
+intended_height = 0
+current_height = 0
+scaling_up = false
+scaling_down = false
+scale_progress = 0
+
 active = false
+
+
             ");
             chatMenu.AddEvent(EventType.Step, (int)EventSubtypeStep.Step, "gml_Object_obj_chatmenu_Step_0", @"
-offset_x -= 1
-offset_y -= 1
-            ");
+offset_x += 0.005
+offset_y += 0.005
 
-            Data.Code.ByName("gml_Room_Loadiingroom_Create").AppendGML(@"
-global.chatmenu = instance_create_unique(0, 0, obj_apchatmenu)
-            ", Data);
-            Data.Code.ByName("gml_Room_Mainmenu_Create").AppendGML(@"
-global.chatmenu.active = false
-            ", Data);
-            Data.Code.ByName("gml_Room_tower_entrancehall_Create").AppendGML(@"
-global.chatmenu.active = true
-            ", Data);
-
-            HelperMethods.AddShader("shd_scrolling_offset", @"
-attribute vec3 in_Position;                  // (x,y,z)
-attribute vec4 in_Colour;                    // (r,g,b,a)
-attribute vec2 in_TextureCoord;              // (u,v)
-
-varying vec2 v_vTexcoord;
-varying vec4 v_vColour;
-
-void main()
+if (scaling_up or scaling_down)
 {
-    vec4 object_space_pos = vec4( in_Position.x, in_Position.y, in_Position.z, 1.0);
-    gl_Position = gm_Matrices[MATRIX_WORLD_VIEW_PROJECTION] * object_space_pos;
-    
-    v_vColour = in_Colour;
-    v_vTexcoord = in_TextureCoord;
-}
-            ", @"
-varying vec2 v_vTexcoord;
-varying vec4 v_vColour;
+    scale_progress += 0.05
+    if (scale_progress == 1)
+    {
+        scaling_up = false
+        scaling_down = false
+    }
 
-uniform vec2 u_resolution;
-uniform vec2 u_offset;
-
-void main()
-{
-    vec2 coords = v_vTexcoord;
-    coords.y *= u_resolution.y / u_resolution.x;
-    gl_FragColor = v_vColour * texture2D( gm_BaseTexture, v_vTexcoord + u_offset);
+    current_height = lerp(current_height, intended_height, sin(scale_progress))
 }
             ");
-            HelperMethods.AddTexture("spr_chatbg", 200, 200, "spr_chatbg_0");
-
-            chatMenu.AddEvent(EventType.Draw, (int)EventSubtypeDraw.DrawGUI, "gml_Object_obj_chatmenu_Draw_64", @"
+            chatMenu.AddEvent(EventType.KeyPress, (int)EventSubtypeKey.vk_tab, "gml_Object_obj_chatmenu_KeyPress_9", @"
+active = !active
 if (active)
 {
-    draw_set_colour(c_white)
-    
-    shader_set(asset_get_index(""shd_scrolling_offset""))
-    shader_set_uniform_f(shader_get_uniform(asset_get_index(""shd_scrolling_offset""), ""u_resolution""), 200, 300);
-    shader_set_uniform_f(shader_get_uniform(asset_get_index(""shd_scrolling_offset""), ""u_offset""), offset_x, offset_y);
+    scaling_up = true
+    scaling_down = false
+    start_height = current_height
+    intended_height = obj_screensizer.actual_height * 0.85
+    scale_progress = 0
+}
+else
+{
+    scaling_up = false
+    scaling_down = true
+    start_height = current_height
+    intended_height = 0
+    scale_progress = 0
+}
+            ");
 
-    var _tex = sprite_get_texture(asset_get_index(""spr_chatbg""), 0)
-    draw_primitive_begin_texture(pr_trianglestrip, _tex)
-    draw_vertex_texture(0, 0, 0, 0)
-    draw_vertex_texture(200, 0, 1, 0)
-    draw_vertex_texture(0, 300, 0, 1)
-    draw_vertex_texture(200, 300, 1, 1)
-    draw_primitive_end()
+
+            Data.Code.ByName("gml_Room_Mainmenu_Create").AppendGML(@"
+instance_destroy(obj_apchatmenu)
+            ", Data);
+            Data.Code.ByName("gml_Room_tower_entrancehall_Create").AppendGML(@"
+global.chatmenu = instance_create_unique(0, 0, obj_apchatmenu)
+            ", Data);
+
+            HelperMethods.AddShader("sh_scrolling_offset");
+
+            HelperMethods.AddTexture("spr_chatborder", 65, 34, "spr_chatborder_0");
+            HelperMethods.AddTexture("spr_chattextborder", 33, 33, "spr_chattextborder_0");
+            Data.Code.ByName("gml_Room_Loadiingroom_Create").AppendGML(@"
+var chat_nineslices = sprite_nineslice_create()
+
+chat_nineslices.enabled = true
+chat_nineslices.left = 32
+chat_nineslices.right = 32
+chat_nineslices.top = 1
+chat_nineslices.bottom = 32
+
+sprite_set_nineslice(asset_get_index(""spr_chatborder""), chat_nineslices)
+
+
+var text_nineslices = sprite_nineslice_create()
+
+text_nineslices.enabled = true
+text_nineslices.left = 16
+text_nineslices.right = 16
+text_nineslices.top = 16
+text_nineslices.bottom = 16
+
+sprite_set_nineslice(asset_get_index(""spr_chattextborder""), text_nineslices)
+", Data);
+
+            chatMenu.AddEvent(EventType.Draw, (int)EventSubtypeDraw.DrawGUI, "gml_Object_obj_chatmenu_Draw_64", @"
+if (current_height == 0)
+    exit
+
+draw_set_colour(c_white)
     
-    shader_reset()
+gpu_set_texrepeat(true)
+
+var bg_sprite = asset_get_index(""spr_chatbg"")
+var offset_shader = asset_get_index(""sh_scrolling_offset"")
+    
+shader_set(offset_shader)
+shader_set_uniform_f(uni_offset, offset_x, offset_y);
+shader_set_uniform_f(uni_res, obj_screensizer.actual_width - 100, current_height);
+
+var tex = sprite_get_texture(bg_sprite, 0)
+draw_primitive_begin_texture(pr_trianglestrip, tex)
+draw_vertex_texture(50, 0, 0, 0)
+draw_vertex_texture(obj_screensizer.actual_width - 50, 0, 1, 0)
+draw_vertex_texture(50, current_height, 0, 1)
+draw_vertex_texture(obj_screensizer.actual_width - 50, current_height, 1, 1)
+draw_primitive_end()
+    
+reset_shader_fix()
+gpu_set_texrepeat(false)
+
+draw_sprite_stretched(asset_get_index(""spr_chatborder""), 0, 50 - 5, 0, obj_screensizer.actual_width - 100 + 6, current_height + 5)
+draw_sprite_stretched(asset_get_index(""spr_chattextborder""), 0, 50 + 20, current_height - 20 - 64, obj_screensizer.actual_width - 100 - 40, 64)
+
+if (active)
+{
+    draw_set_alpha(scale_progress * 0.5);
+	draw_rectangle_color(0, 0, obj_screensizer.actual_width, obj_screensizer.actual_height, c_white, c_white, c_white, c_white, false);
+}
+else
+{
+    draw_set_alpha((1 - scale_progress) * 0.5);
+	draw_rectangle_color(0, 0, obj_screensizer.actual_width, obj_screensizer.actual_height, c_white, c_white, c_white, c_white, false);
 }
             ");
         }
