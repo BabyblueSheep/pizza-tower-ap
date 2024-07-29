@@ -9,4 +9,6 @@ exterR ap_disconnect();
 exterR ap_connect_slot(const char* name, const char* password, double deathlink);
 exterR ap_poll();
 exterR ap_get_state();
+exterS ap_get_all_messages();
+exterR ap_send_message(const char* msg);
 exterR ap_wants_deathlink();

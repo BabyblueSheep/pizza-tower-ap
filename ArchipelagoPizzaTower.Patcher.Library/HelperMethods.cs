@@ -13,14 +13,14 @@ using UndertaleModLib.Models;
 
 namespace ArchipelagoPizzaTower.Patcher.Library
 {
-    public static class HelperMethods
+    internal static class HelperMethods
     {
         /// <summary>
         /// Adds instructions to the beginning of a code object.
         /// </summary>
         /// <param name="code">The code object.</param>
         /// <param name="instructions">The instructions to add.</param>
-        public static void Prepend(this UndertaleCode code, IList<UndertaleInstruction> instructions)
+        internal static void Prepend(this UndertaleCode code, IList<UndertaleInstruction> instructions)
         {
             if (code.ParentEntry is not null)
                 return;
@@ -39,7 +39,7 @@ namespace ArchipelagoPizzaTower.Patcher.Library
         /// <param name="code">The code object.</param>
         /// <param name="gmlCode">The GML code to preprend.</param>
         /// <exception cref="Exception"> if the GML code does not compile or if there's an error writing the code to the profile entry.</exception>
-        public static void PrependGML(this UndertaleCode code, string gmlCode)
+        internal static void PrependGML(this UndertaleCode code, string gmlCode)
         {
             if (code.ParentEntry is not null)
                 return;
@@ -79,7 +79,7 @@ namespace ArchipelagoPizzaTower.Patcher.Library
         /// <param name="returnType">The return type of the function.</param>
         /// <param name="argumentTypes">The argument types of the function.</param>
         /// 
-        public static void AddFunction(this UndertaleExtensionFile file, string name, UndertaleExtensionVarType returnType, params UndertaleExtensionVarType[] argumentTypes)
+        internal static void AddFunction(this UndertaleExtensionFile file, string name, UndertaleExtensionVarType returnType, params UndertaleExtensionVarType[] argumentTypes)
         {
             UndertaleSimpleList<UndertaleExtensionFunctionArg> arguments = new();
             foreach (UndertaleExtensionVarType arg in argumentTypes)
@@ -97,14 +97,14 @@ namespace ArchipelagoPizzaTower.Patcher.Library
             };
             file.Functions.Add(function);
         }
-        
+
         /// <summary>
         /// Adds a script object to the game data.
         /// </summary>
         /// <param name="scriptName">The name of the script object.</param>
         /// <param name="codeName">The name of the code object.</param>
         /// <param name="code">The code itself.</param>
-        public static void AddScript(string scriptName, string codeName, string code)
+        internal static void AddScript(string scriptName, string codeName, string code)
         {
             GamePatcher.Data.Scripts.Add(new UndertaleScript { Name = GamePatcher.Data.Strings.MakeString(scriptName), Code = AddCode(codeName, code) });
         }
@@ -115,7 +115,7 @@ namespace ArchipelagoPizzaTower.Patcher.Library
         /// <param name="codeName">The name of the code object.</param>
         /// <param name="code">The code itself.</</param>
         /// <returns>The code object.</returns>
-        public static UndertaleCode AddCode(string codeName, string code)
+        internal static UndertaleCode AddCode(string codeName, string code)
         {
             UndertaleCode codeObject = new();
             codeObject.Name = GamePatcher.Data.Strings.MakeString(codeName);
@@ -129,7 +129,7 @@ namespace ArchipelagoPizzaTower.Patcher.Library
         /// </summary>
         /// <param name="name">The name of the game object.</param>
         /// <returns>The game object.</returns>
-        public static UndertaleGameObject AddObject(string name)
+        internal static UndertaleGameObject AddObject(string name)
         {
             UndertaleGameObject gameObject = new()
             {
@@ -147,7 +147,7 @@ namespace ArchipelagoPizzaTower.Patcher.Library
         /// <param name="eventSubType">The event subtype. This depends on the event type.</param>
         /// <param name="codeName">The name of the code object.</param>
         /// <param name="code">The code itself.</param>
-        public static void AddEvent(this UndertaleGameObject gameObject, EventType eventType, uint eventSubType, string codeName, string code)
+        internal static void AddEvent(this UndertaleGameObject gameObject, EventType eventType, uint eventSubType, string codeName, string code)
         {
             UndertaleCode script = AddCode(codeName, code);
             UndertalePointerList<UndertaleGameObject.Event> events = gameObject.Events[(int)eventType];
@@ -169,7 +169,10 @@ namespace ArchipelagoPizzaTower.Patcher.Library
         /// <param name="textureName">The name of the sprite object.</param>
         /// <param name="fileName">The name of the texture file for replacing.</param>
         /// <param name="frame">Which frame to replace.</param>
-        public static void ReplaceTexture(string textureName, string fileName, int frame = 0) => GamePatcher.Data.Sprites.ByName(textureName).Textures[frame].Texture = GamePatcher.Data.TexturePageItems[GamePatcher.NameToPageItem[fileName]];
+        internal static void ReplaceTexture(string textureName, string fileName, int frame = 0)
+        {
+            GamePatcher.Data.Sprites.ByName(textureName).Textures[frame].Texture = GamePatcher.Data.TexturePageItems[GamePatcher.NameToPageItem[fileName]];
+        }
 
         /// <summary>
         /// Adds a sprite object to the game data.
@@ -178,7 +181,7 @@ namespace ArchipelagoPizzaTower.Patcher.Library
         /// <param name="width">The width of the sprite.</param>
         /// <param name="height">The height of the sprite.</param>
         /// <param name="fileNames">Names of the texture files.</param>
-        public static void AddTexture(string textureName, uint width, uint height, params string[] fileNames)
+        internal static void AddTexture(string textureName, uint width, uint height, params string[] fileNames)
         {
             UndertaleSprite sprite = new()
             {
@@ -199,7 +202,11 @@ namespace ArchipelagoPizzaTower.Patcher.Library
             GamePatcher.Data.Sprites.Add(sprite);
         }
 
-        public static void AddShader(string shaderName)
+        /// <summary>
+        /// Adds a shader object to the game data.
+        /// </summary>
+        /// <param name="shaderName">The name of the shader.</param>
+        internal static void AddShader(string shaderName)
         {
             UndertaleShader shader = new();
             shader.Name = GamePatcher.Data.Strings.MakeString(shaderName);
